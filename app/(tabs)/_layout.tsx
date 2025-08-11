@@ -15,13 +15,25 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveBackgroundColor: Colors[colorScheme ?? 'light'].background,
+        tabBarLabelStyle: {
+          fontSize: 14,
+          fontWeight: '600',
+          textAlign: 'center',
+        },
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,
         tabBarStyle: Platform.select({
           ios: {
-            // Use a transparent background on iOS to show the blur effect
-            position: 'absolute',
+            paddingBottom: 12, // menos padding para que el texto no se corte
+            height: 60, // altura ajustada
+            borderTopWidth: 0,
+          },
+          android: {
+            paddingBottom: 8,
+            height: 56,
+            borderTopWidth: 0,
           },
           default: {},
         }),
