@@ -32,13 +32,15 @@ export function WeekStats({
           <ThemedText style={styles.statLabel}>Completadas</ThemedText>
         </View>
 
-        <View style={styles.statCard}>
-          <View style={[styles.statIcon, { backgroundColor: '#2196F3' }]}>
-            <IconSymbol name="clock" size={24} color="white" />
+        {totalDuration > 0 && (
+          <View style={styles.statCard}>
+            <View style={[styles.statIcon, { backgroundColor: '#2196F3' }]}>
+              <IconSymbol name="clock" size={24} color="white" />
+            </View>
+            <ThemedText style={styles.statValue}>{totalDuration}min</ThemedText>
+            <ThemedText style={styles.statLabel}>Tiempo Total</ThemedText>
           </View>
-          <ThemedText style={styles.statValue}>{totalDuration}min</ThemedText>
-          <ThemedText style={styles.statLabel}>Tiempo Total</ThemedText>
-        </View>
+        )}
 
         <View style={styles.statCard}>
           <View style={[styles.statIcon, { backgroundColor: '#FF6B6B' }]}>
@@ -80,10 +82,10 @@ const styles = StyleSheet.create({
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
   },
   statCard: {
-    width: '48%',
+    width: '30%',
     alignItems: 'center',
     marginBottom: 16,
   },

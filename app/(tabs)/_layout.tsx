@@ -33,13 +33,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="calendar" color={color} />,
         }}
       />
-      <Tabs.Screen
+      {/* <Tabs.Screen
         name="history"
         options={{
           title: 'Histórico',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="chart.line.uptrend.xyaxis" color={color} />,
         }}
-      />
+      /> */}
       <Tabs.Screen
         name="routines"
         options={{

@@ -13,6 +13,7 @@ interface Rutina {
   type: string;
   calorias: number;
   description: string;
+  status: 'Realizado' | 'Pendiente';
 }
 
 interface RutinasResponse {
@@ -27,6 +28,7 @@ interface NewRoutine {
   type: string;
   calorias: string;
   description: string;
+  status: 'Realizado' | 'Pendiente';
 }
 
 export default function CurrentWeekScreen() {
@@ -41,7 +43,8 @@ export default function CurrentWeekScreen() {
     ejercicio: '',
     type: '',
     calorias: '',
-    description: ''
+    description: '',
+    status: 'Pendiente'
   });
 
   useEffect(() => {
@@ -112,12 +115,13 @@ export default function CurrentWeekScreen() {
           ejercicio: newRoutine.ejercicio,
           type: newRoutine.type,
           calorias: parseFloat(newRoutine.calorias) || 0,
-          description: newRoutine.description
+          description: newRoutine.description,
+          status: newRoutine.status
         }),
       });
 
       if (response.ok) {
-        setNewRoutine({ ejercicio: '', type: '', calorias: '', description: '' });
+        setNewRoutine({ ejercicio: '', type: '', calorias: '', description: '', status: 'Pendiente' });
         setShowAddModal(false);
         Alert.alert('¡Éxito!', 'Rutina agregada correctamente');
         // Recargar las rutinas
@@ -177,6 +181,48 @@ export default function CurrentWeekScreen() {
     );
   };
 
+  const handleMarkAsCompleted = async (rutinaId: number) => {
+    if (!userId) return;
+    
+    // Encontrar la rutina completa
+    const rutina = rutinas.find(r => r.id === rutinaId);
+    if (!rutina) {
+      Alert.alert('Error', 'No se encontró la rutina');
+      return;
+    }
+
+    try {
+      const url = getFullUrl(`/api/rutinas/${userId}`);
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: rutina.id,
+          ejercicio: rutina.ejercicio,
+          type: rutina.type,
+          calorias: rutina.calorias,
+          description: rutina.description,
+          status: 'Realizado'
+        }),
+      });
+
+      if (response.ok) {
+        setShowDetailModal(false);
+        setSelectedRutina(null);
+        Alert.alert('¡Éxito!', 'Rutina marcada como completada');
+        // Recargar las rutinas
+        loadRutinas();
+      } else {
+        Alert.alert('Error', 'No se pudo marcar la rutina como completada');
+      }
+    } catch (error) {
+      console.error('Error updating routine status:', error);
+      Alert.alert('Error', 'No se pudo marcar la rutina como completada');
+    }
+  };
+
   const handleRutinaPress = (rutina: Rutina) => {
     setSelectedRutina(rutina);
     setShowDetailModal(true);
@@ -185,6 +231,7 @@ export default function CurrentWeekScreen() {
   // Calcular estadísticas de las rutinas
   const totalCalories = rutinas.reduce((sum: number, rutina: Rutina) => sum + rutina.calorias, 0);
   const totalRoutines = rutinas.length;
+  const completedRoutines = rutinas.filter(rutina => rutina.status === 'Realizado').length;
 
   if (loading) {
     return (
@@ -226,9 +273,9 @@ export default function CurrentWeekScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         <WeekStats
-          totalDuration={0} // No tenemos duración en rutinas
+          totalDuration={0} // No mostrar duración
           totalCalories={totalCalories}
-          completedActivities={totalRoutines}
+          completedActivities={completedRoutines}
           totalActivities={totalRoutines}
         />
 
@@ -253,12 +300,28 @@ export default function CurrentWeekScreen() {
           rutinas.map((rutina) => (
             <Pressable 
               key={rutina.id} 
-              style={styles.rutinaCard}
+              style={[
+                styles.rutinaCard,
+                rutina.status === 'Realizado' && styles.rutinaCardCompleted
+              ]}
               onPress={() => handleRutinaPress(rutina)}
             >
               <View style={styles.rutinaHeader}>
                 <ThemedText style={styles.rutinaTitle}>{rutina.ejercicio}</ThemedText>
-                <ThemedText style={styles.rutinaType}>{rutina.type}</ThemedText>
+                <View style={styles.rutinaHeaderRight}>
+                  <ThemedText style={styles.rutinaType}>{rutina.type}</ThemedText>
+                  <View style={[
+                    styles.statusBadge, 
+                    rutina.status === 'Realizado' ? styles.statusBadgeCompleted : styles.statusBadgePending
+                  ]}>
+                    <ThemedText style={[
+                      styles.statusText,
+                      rutina.status === 'Realizado' ? styles.statusTextCompleted : styles.statusTextPending
+                    ]}>
+                      {rutina.status}
+                    </ThemedText>
+                  </View>
+                </View>
               </View>
               <ThemedText style={styles.rutinaDescription}>{rutina.description}</ThemedText>
               <View style={styles.rutinaStats}>
@@ -266,6 +329,12 @@ export default function CurrentWeekScreen() {
                   <IconSymbol name="flame" size={16} color="#FF6B35" />
                   <ThemedText style={styles.rutinaStatText}>{rutina.calorias} cal</ThemedText>
                 </View>
+                {rutina.status === 'Realizado' && (
+                  <View style={styles.rutinaStat}>
+                    <IconSymbol name="checkmark.circle.fill" size={16} color="#10B981" />
+                    <ThemedText style={styles.completedText}>Completada</ThemedText>
+                  </View>
+                )}
               </View>
             </Pressable>
           ))
@@ -354,6 +423,59 @@ export default function CurrentWeekScreen() {
                 ))}
               </View>
             </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Estado de la Rutina</Text>
+              <View style={styles.statusOptions}>
+                <Pressable
+                  style={[
+                    styles.statusOptionButton,
+                    newRoutine.status === 'Pendiente' ? styles.statusOptionButtonSelected : null
+                  ]}
+                  onPress={() => setNewRoutine({...newRoutine, status: 'Pendiente'})}
+                >
+                  <View style={styles.statusOptionContent}>
+                    <IconSymbol name="clock" size={20} color={newRoutine.status === 'Pendiente' ? '#92400E' : '#666'} />
+                    <Text style={[
+                      styles.statusOptionText,
+                      newRoutine.status === 'Pendiente' ? styles.statusOptionTextSelected : null
+                    ]}>
+                      Pendiente
+                    </Text>
+                  </View>
+                  <Text style={[
+                    styles.statusOptionDescription,
+                    newRoutine.status === 'Pendiente' ? styles.statusOptionDescriptionSelected : null
+                  ]}>
+                    Por realizar
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  style={[
+                    styles.statusOptionButton,
+                    newRoutine.status === 'Realizado' ? styles.statusOptionButtonSelected : null
+                  ]}
+                  onPress={() => setNewRoutine({...newRoutine, status: 'Realizado'})}
+                >
+                  <View style={styles.statusOptionContent}>
+                    <IconSymbol name="checkmark.circle.fill" size={20} color={newRoutine.status === 'Realizado' ? '#065F46' : '#666'} />
+                    <Text style={[
+                      styles.statusOptionText,
+                      newRoutine.status === 'Realizado' ? styles.statusOptionTextSelected : null
+                    ]}>
+                      Realizado
+                    </Text>
+                  </View>
+                  <Text style={[
+                    styles.statusOptionDescription,
+                    newRoutine.status === 'Realizado' ? styles.statusOptionDescriptionSelected : null
+                  ]}>
+                    Ya completada
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
           </ScrollView>
         </ThemedView>
       </Modal>
@@ -387,6 +509,36 @@ export default function CurrentWeekScreen() {
                     <View style={styles.detailTypeContainer}>
                       <ThemedText style={styles.detailType}>{selectedRutina.type}</ThemedText>
                     </View>
+                  </View>
+
+                  <View style={styles.statusSection}>
+                    <Text style={styles.detailLabel}>Estado:</Text>
+                    <View style={[
+                      styles.statusDetailBadge,
+                      selectedRutina.status === 'Realizado' ? styles.statusDetailBadgeCompleted : styles.statusDetailBadgePending
+                    ]}>
+                      <IconSymbol 
+                        name={selectedRutina.status === 'Realizado' ? "checkmark.circle.fill" : "clock"} 
+                        size={16} 
+                        color={selectedRutina.status === 'Realizado' ? "#10B981" : "#F59E0B"} 
+                      />
+                      <ThemedText style={[
+                        styles.statusDetailText,
+                        selectedRutina.status === 'Realizado' ? styles.statusDetailTextCompleted : styles.statusDetailTextPending
+                      ]}>
+                        {selectedRutina.status}
+                      </ThemedText>
+                    </View>
+                    
+                    {selectedRutina.status === 'Pendiente' && (
+                      <Pressable 
+                        onPress={() => selectedRutina && handleMarkAsCompleted(selectedRutina.id)}
+                        style={styles.completeButtonInline}
+                      >
+                        <IconSymbol name="checkmark.circle" size={20} color="white" />
+                        <Text style={styles.completeButtonText}>Marcar como Completada</Text>
+                      </Pressable>
+                    )}
                   </View>
 
                   <View style={styles.detailSection}>
@@ -716,5 +868,142 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     flex: 1,
     color: '#DC2626',
+  },
+  // Estilos para status
+  rutinaCardCompleted: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#10B981',
+    borderWidth: 1,
+  },
+  rutinaHeaderRight: {
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusBadgeCompleted: {
+    backgroundColor: '#D1FAE5',
+  },
+  statusBadgePending: {
+    backgroundColor: '#FEF3C7',
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  statusTextCompleted: {
+    color: '#065F46',
+  },
+  statusTextPending: {
+    color: '#92400E',
+  },
+  completedText: {
+    fontSize: 12,
+    marginLeft: 4,
+    fontWeight: '500',
+    color: '#10B981',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  completeButtonContainer: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  completeButton: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  statusSection: {
+    marginBottom: 16,
+  },
+  statusDetailBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  statusDetailBadgeCompleted: {
+    backgroundColor: '#D1FAE5',
+  },
+  statusDetailBadgePending: {
+    backgroundColor: '#FEF3C7',
+  },
+  statusDetailText: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+    textTransform: 'uppercase',
+  },
+  statusDetailTextCompleted: {
+    color: '#065F46',
+  },
+  statusDetailTextPending: {
+    color: '#92400E',
+  },
+  // Estilos para la selección de status en el modal de creación
+  statusOptions: {
+    gap: 12,
+  },
+  statusOptionButton: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 16,
+  },
+  statusOptionButtonSelected: {
+    backgroundColor: '#F0F9FF',
+    borderColor: '#3B82F6',
+  },
+  statusOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  statusOptionText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+    color: '#374151',
+  },
+  statusOptionTextSelected: {
+    color: '#1E40AF',
+  },
+  statusOptionDescription: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginLeft: 28,
+  },
+  statusOptionDescriptionSelected: {
+    color: '#3B82F6',
+  },
+  // Botón completar en línea con el status
+  completeButtonInline: {
+    backgroundColor: '#10B981',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginTop: 12,
+  },
+  completeButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 });

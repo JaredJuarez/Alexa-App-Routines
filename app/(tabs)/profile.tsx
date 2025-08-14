@@ -140,10 +140,10 @@ export default function ProfileScreen() {
         </View>
         <ThemedText style={styles.name}>{profile.name}</ThemedText>
         <ThemedText style={styles.email}>{profile.email}</ThemedText>
-        <Pressable style={styles.editButton} onPress={() => setShowEditModal(true)}>
+        {/* <Pressable style={styles.editButton} onPress={() => setShowEditModal(true)}>
           <IconSymbol name="pencil" size={16} color="#007AFF" />
           <ThemedText style={styles.editButtonText}>Editar Perfil</ThemedText>
-        </Pressable>
+        </Pressable> */}
         <Pressable style={styles.logoutButton} onPress={handleLogout}>
           <IconSymbol name="arrow.right.square" size={16} color="#FF3B30" />
           <ThemedText style={styles.logoutButtonText}>Cerrar Sesión</ThemedText>
