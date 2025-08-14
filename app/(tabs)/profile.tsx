@@ -1,19 +1,89 @@
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { mockUserProfile } from '@/data/mockData';
-import React, { useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { getFullUrl } from '@/constants/Config';
+import { router } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { authService } from '../../services/authService';
+
+interface UserProfile {
+  id: number;
+  name: string;
+  phone: string;
+  email: string;
+  password: string;
+  status: boolean;
+  rol: {
+    id: number;
+    name: string;
+  };
+}
+
+interface UserProfileResponse {
+  message: string;
+  data: UserProfile;
+  error: boolean;
+  status: string;
+}
 
 export default function ProfileScreen() {
-  const [profile, setProfile] = useState(mockUserProfile);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editingProfile, setEditingProfile] = useState(profile);
+
+  useEffect(() => {
+    loadUserProfile();
+  }, []);
+
+  const loadUserProfile = async () => {
+    try {
+      const userId = await authService.getUserId();
+      if (!userId) {
+        Alert.alert('Error', 'No se pudo obtener la información del usuario');
+        return;
+      }
+
+      const url = getFullUrl(`/api/auth/${userId}`);
+      const response = await fetch(url);
+      const data: UserProfileResponse = await response.json();
+
+      if (data.error === false && data.data) {
+        setProfile(data.data);
+      } else {
+        Alert.alert('Error', data.message || 'No se pudo cargar el perfil');
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+      Alert.alert('Error', 'No se pudo cargar el perfil del usuario');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSaveProfile = () => {
-    setProfile(editingProfile);
-    setShowEditModal(false);
-    Alert.alert('¡Perfil actualizado!', 'Los cambios han sido guardados correctamente.');
+    Alert.alert('Información', 'La funcionalidad de edición estará disponible próximamente');
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Cerrar Sesión',
+      '¿Estás seguro de que quieres cerrar sesión?',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Cerrar Sesión',
+          style: 'destructive',
+          onPress: async () => {
+            await authService.logout();
+            router.replace('/login');
+          },
+        },
+      ]
+    );
   };
 
   const getFitnessLevelText = (level: string) => {
@@ -38,8 +108,29 @@ export default function ProfileScreen() {
     return { text: 'Obesidad', color: '#F44336' };
   };
 
-  const bmi = parseFloat(calculateBMI(profile.weight, profile.height));
+  const bmi = 23.5; // Valor temporal hasta que tengamos weight/height del API
   const bmiCategory = getBMICategory(bmi);
+
+  if (loading) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <ThemedText style={styles.loadingText}>Cargando perfil...</ThemedText>
+        </View>
+      </ThemedView>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={styles.errorContainer}>
+          <ThemedText style={styles.errorText}>No se pudo cargar el perfil</ThemedText>
+        </View>
+      </ThemedView>
+    );
+  }
 
   return (
     <ThemedView style={styles.container}>
@@ -52,6 +143,10 @@ export default function ProfileScreen() {
         <Pressable style={styles.editButton} onPress={() => setShowEditModal(true)}>
           <IconSymbol name="pencil" size={16} color="#007AFF" />
           <ThemedText style={styles.editButtonText}>Editar Perfil</ThemedText>
+        </Pressable>
+        <Pressable style={styles.logoutButton} onPress={handleLogout}>
+          <IconSymbol name="arrow.right.square" size={16} color="#FF3B30" />
+          <ThemedText style={styles.logoutButtonText}>Cerrar Sesión</ThemedText>
         </Pressable>
       </View>
 
@@ -66,95 +161,37 @@ export default function ProfileScreen() {
           
           <View style={styles.infoGrid}>
             <View style={styles.infoItem}>
-              <IconSymbol name="calendar" size={20} color="#666" />
+              <IconSymbol name="person" size={20} color="#666" />
               <View>
-                <ThemedText style={styles.infoLabel}>Edad</ThemedText>
-                <ThemedText style={styles.infoValue}>{profile.age} años</ThemedText>
+                <ThemedText style={styles.infoLabel}>ID Usuario</ThemedText>
+                <ThemedText style={styles.infoValue}>{profile.id}</ThemedText>
               </View>
             </View>
 
             <View style={styles.infoItem}>
-              <IconSymbol name="ruler" size={20} color="#666" />
+              <IconSymbol name="phone" size={20} color="#666" />
               <View>
-                <ThemedText style={styles.infoLabel}>Altura</ThemedText>
-                <ThemedText style={styles.infoValue}>{profile.height} cm</ThemedText>
+                <ThemedText style={styles.infoLabel}>Teléfono</ThemedText>
+                <ThemedText style={styles.infoValue}>{profile.phone}</ThemedText>
               </View>
             </View>
 
             <View style={styles.infoItem}>
-              <IconSymbol name="scalemass" size={20} color="#666" />
+              <IconSymbol name="person.badge.shield.checkmark" size={20} color="#666" />
               <View>
-                <ThemedText style={styles.infoLabel}>Peso</ThemedText>
-                <ThemedText style={styles.infoValue}>{profile.weight} kg</ThemedText>
+                <ThemedText style={styles.infoLabel}>Rol</ThemedText>
+                <ThemedText style={styles.infoValue}>{profile.rol.name}</ThemedText>
               </View>
             </View>
 
             <View style={styles.infoItem}>
-              <IconSymbol name="heart.text.square" size={20} color="#666" />
+              <IconSymbol name="checkmark.circle" size={20} color="#666" />
               <View>
-                <ThemedText style={styles.infoLabel}>IMC</ThemedText>
-                <ThemedText style={[styles.infoValue, { color: bmiCategory.color }]}>
-                  {bmi} - {bmiCategory.text}
+                <ThemedText style={styles.infoLabel}>Estado</ThemedText>
+                <ThemedText style={[styles.infoValue, { color: profile.status ? '#4CAF50' : '#F44336' }]}>
+                  {profile.status ? 'Activo' : 'Inactivo'}
                 </ThemedText>
               </View>
-            </View>
-          </View>
-        </ThemedView>
-
-        {/* Nivel de Fitness */}
-        <ThemedView style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>Nivel de Fitness</ThemedText>
-          <View style={styles.fitnessLevel}>
-            <IconSymbol name="figure.strengthtraining.traditional" size={24} color="#007AFF" />
-            <ThemedText style={styles.fitnessLevelText}>
-              {getFitnessLevelText(profile.fitnessLevel)}
-            </ThemedText>
-          </View>
-        </ThemedView>
-
-        {/* Objetivos */}
-        <ThemedView style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>Objetivos</ThemedText>
-          <View style={styles.goalsList}>
-            {profile.goals.map((goal, index) => (
-              <View key={index} style={styles.goalItem}>
-                <IconSymbol name="target" size={16} color="#4CAF50" />
-                <ThemedText style={styles.goalText}>{goal}</ThemedText>
-              </View>
-            ))}
-          </View>
-        </ThemedView>
-
-        {/* Preferencias */}
-        <ThemedView style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>Preferencias de Entrenamiento</ThemedText>
-          
-          <View style={styles.preferenceItem}>
-            <ThemedText style={styles.preferenceLabel}>Tipos de ejercicio preferidos:</ThemedText>
-            <View style={styles.preferenceList}>
-              {profile.preferences.workoutTypes.map((type, index) => (
-                <View key={index} style={styles.preferenceTag}>
-                  <ThemedText style={styles.preferenceTagText}>
-                    {type === 'cardio' ? 'Cardio' : type === 'strength' ? 'Fuerza' : type}
-                  </ThemedText>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.preferenceItem}>
-            <ThemedText style={styles.preferenceLabel}>Tiempo disponible por día:</ThemedText>
-            <ThemedText style={styles.preferenceValue}>{profile.preferences.availableTime} minutos</ThemedText>
-          </View>
-
-          <View style={styles.preferenceItem}>
-            <ThemedText style={styles.preferenceLabel}>Días de entrenamiento:</ThemedText>
-            <View style={styles.preferenceList}>
-              {profile.preferences.workoutDays.map((day, index) => (
-                <View key={index} style={styles.preferenceTag}>
-                  <ThemedText style={styles.preferenceTagText}>{day}</ThemedText>
-                </View>
-              ))}
             </View>
           </View>
         </ThemedView>
@@ -167,15 +204,31 @@ export default function ProfileScreen() {
             <View style={styles.alexaInfo}>
               <ThemedText style={styles.alexaStatusText}>Conectado</ThemedText>
               <ThemedText style={styles.alexaStatusSubtext}>
-                Tu perfil está sincronizado con Alexa
+                Tu perfil está sincronizado con Alexa para gestionar rutinas de entrenamiento
               </ThemedText>
             </View>
             <View style={styles.alexaIndicator} />
           </View>
+          
+          <View style={styles.alexaFeatures}>
+            <ThemedText style={styles.alexaFeaturesTitle}>Funcionalidades disponibles:</ThemedText>
+            <View style={styles.alexaFeatureItem}>
+              <IconSymbol name="checkmark.circle.fill" size={16} color="#4CAF50" />
+              <ThemedText style={styles.alexaFeatureText}>Crear rutinas por voz</ThemedText>
+            </View>
+            <View style={styles.alexaFeatureItem}>
+              <IconSymbol name="checkmark.circle.fill" size={16} color="#4CAF50" />
+              <ThemedText style={styles.alexaFeatureText}>Seguimiento de actividades</ThemedText>
+            </View>
+            <View style={styles.alexaFeatureItem}>
+              <IconSymbol name="checkmark.circle.fill" size={16} color="#4CAF50" />
+              <ThemedText style={styles.alexaFeatureText}>Recordatorios personalizados</ThemedText>
+            </View>
+          </View>
         </ThemedView>
       </ScrollView>
 
-      {/* Modal de edición */}
+      {/* Modal simplificado para futuras funcionalidades */}
       <Modal
         visible={showEditModal}
         animationType="slide"
@@ -184,82 +237,17 @@ export default function ProfileScreen() {
         <ThemedView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Pressable onPress={() => setShowEditModal(false)}>
-              <ThemedText style={styles.cancelButton}>Cancelar</ThemedText>
+              <ThemedText style={styles.cancelButton}>Cerrar</ThemedText>
             </Pressable>
-            <ThemedText style={styles.modalTitle}>Editar Perfil</ThemedText>
-            <Pressable onPress={handleSaveProfile}>
-              <ThemedText style={styles.saveButton}>Guardar</ThemedText>
-            </Pressable>
+            <ThemedText style={styles.modalTitle}>Configuración</ThemedText>
+            <View style={{ width: 60 }} />
           </View>
-
-          <ScrollView style={styles.modalContent}>
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.inputLabel}>Nombre</ThemedText>
-              <TextInput
-                style={styles.textInput}
-                value={editingProfile.name}
-                onChangeText={(text) => setEditingProfile({...editingProfile, name: text})}
-                placeholder="Tu nombre"
-                placeholderTextColor="#999"
-              />
-            </View>
-
-            <View style={styles.inputRow}>
-              <View style={styles.inputGroup}>
-                <ThemedText style={styles.inputLabel}>Edad</ThemedText>
-                <TextInput
-                  style={styles.textInput}
-                  value={editingProfile.age.toString()}
-                  onChangeText={(text) => setEditingProfile({...editingProfile, age: parseInt(text) || 0})}
-                  placeholder="25"
-                  placeholderTextColor="#999"
-                  keyboardType="numeric"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <ThemedText style={styles.inputLabel}>Altura (cm)</ThemedText>
-                <TextInput
-                  style={styles.textInput}
-                  value={editingProfile.height.toString()}
-                  onChangeText={(text) => setEditingProfile({...editingProfile, height: parseInt(text) || 0})}
-                  placeholder="175"
-                  placeholderTextColor="#999"
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.inputLabel}>Peso (kg)</ThemedText>
-              <TextInput
-                style={styles.textInput}
-                value={editingProfile.weight.toString()}
-                onChangeText={(text) => setEditingProfile({...editingProfile, weight: parseInt(text) || 0})}
-                placeholder="70"
-                placeholderTextColor="#999"
-                keyboardType="numeric"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <ThemedText style={styles.inputLabel}>Tiempo disponible por día (minutos)</ThemedText>
-              <TextInput
-                style={styles.textInput}
-                value={editingProfile.preferences.availableTime.toString()}
-                onChangeText={(text) => setEditingProfile({
-                  ...editingProfile, 
-                  preferences: {
-                    ...editingProfile.preferences,
-                    availableTime: parseInt(text) || 0
-                  }
-                })}
-                placeholder="60"
-                placeholderTextColor="#999"
-                keyboardType="numeric"
-              />
-            </View>
-          </ScrollView>
+          
+          <View style={styles.modalContent}>
+            <ThemedText style={styles.comingSoonText}>
+              La funcionalidad de edición de perfil estará disponible próximamente.
+            </ThemedText>
+          </View>
         </ThemedView>
       </Modal>
     </ThemedView>
@@ -459,5 +447,65 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     backgroundColor: '#F9F9F9',
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#FF3B30',
+    marginTop: 12,
+  },
+  logoutButtonText: {
+    color: '#FF3B30',
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    opacity: 0.7,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#F44336',
+  },
+  alexaFeatures: {
+    marginTop: 16,
+  },
+  alexaFeaturesTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 12,
+    opacity: 0.8,
+  },
+  alexaFeatureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
+  alexaFeatureText: {
+    fontSize: 14,
+    opacity: 0.8,
+  },
+  comingSoonText: {
+    fontSize: 16,
+    textAlign: 'center',
+    opacity: 0.7,
+    lineHeight: 24,
   },
 });
