@@ -1,7 +1,7 @@
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { getFullUrl } from '@/constants/Config';
+import { API_CONFIG, getFullUrl } from '@/constants/Config';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
@@ -41,7 +41,7 @@ export default function RoutinesScreen() {
         const response = await fetch(url, {
           method: 'GET',
           headers: {
-            'Content-Type': 'application/json',
+            ...API_CONFIG.DEFAULT_HEADERS,
           },
         });
 

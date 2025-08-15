@@ -2,7 +2,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { WeekStats } from '@/components/WeekStats';
-import { getFullUrl } from '@/constants/Config';
+import { API_CONFIG, getFullUrl } from '@/constants/Config';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { authService } from '../../services/authService';
@@ -73,7 +73,7 @@ export default function CurrentWeekScreen() {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          ...API_CONFIG.DEFAULT_HEADERS,
         },
         body: JSON.stringify({ id: userId }),
       });
@@ -81,7 +81,9 @@ export default function CurrentWeekScreen() {
       const data: RutinasResponse = await response.json();
 
       if (data.error === false && data.data) {
-        setRutinas(data.data);
+        // Ordenar las rutinas por ID descendente (las más recientes primero)
+        const sortedRutinas = data.data.sort((a, b) => b.id - a.id);
+        setRutinas(sortedRutinas);
       } else {
         console.error('Error loading rutinas:', data.message);
       }
@@ -109,7 +111,7 @@ export default function CurrentWeekScreen() {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          ...API_CONFIG.DEFAULT_HEADERS,
         },
         body: JSON.stringify({
           ejercicio: newRoutine.ejercicio,
@@ -158,7 +160,7 @@ export default function CurrentWeekScreen() {
               const response = await fetch(url, {
                 method: 'DELETE',
                 headers: {
-                  'Content-Type': 'application/json',
+                  ...API_CONFIG.DEFAULT_HEADERS,
                 },
               });
 
@@ -196,7 +198,7 @@ export default function CurrentWeekScreen() {
       const response = await fetch(url, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
+          ...API_CONFIG.DEFAULT_HEADERS,
         },
         body: JSON.stringify({
           id: rutina.id,

@@ -18,7 +18,7 @@ class AuthService {
       const response = await fetch(url, {
         method,
         headers: {
-          'Content-Type': 'application/json',
+          ...API_CONFIG.DEFAULT_HEADERS,
         },
         body: data ? JSON.stringify(data) : undefined,
         signal: controller.signal,
@@ -67,14 +67,12 @@ class AuthService {
   async login(loginData: LoginData): Promise<AuthResponse> {
     const response = await this.makeRequest(API_CONFIG.ENDPOINTS.LOGIN, 'POST', loginData);
     
-    console.log('Login response:', JSON.stringify(response, null, 2));
     
     // Guardar token, rol y userId en almacenamiento seguro
     if (response.data && response.data.token && response.data.idUser) {
       await StorageService.saveToken(response.data.token);
       await StorageService.saveRole(response.data.role);
       await StorageService.saveUserId(response.data.idUser);
-      console.log('User data saved successfully');
     } else {
       console.log('Failed to save user data - missing fields:', {
         hasData: !!response.data,

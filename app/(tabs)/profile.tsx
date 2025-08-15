@@ -1,7 +1,7 @@
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { getFullUrl } from '@/constants/Config';
+import { API_CONFIG, getFullUrl } from '@/constants/Config';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
@@ -45,7 +45,12 @@ export default function ProfileScreen() {
       }
 
       const url = getFullUrl(`/api/auth/${userId}`);
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          ...API_CONFIG.DEFAULT_HEADERS,
+        },
+      });
       const data: UserProfileResponse = await response.json();
 
       if (data.error === false && data.data) {
